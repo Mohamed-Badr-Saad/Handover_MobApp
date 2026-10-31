@@ -7,7 +7,7 @@
 (function (global) {
   "use strict";
 
-  global.APP_VERSION = "1.1.1";
+  global.APP_VERSION = "1.1.2";
 
   var esc = global.Util.esc;
   var t = global.t;
@@ -55,7 +55,7 @@
     $("#gate-body").innerHTML = bodyHtml;
     $("#gate-foot").innerHTML = (footHtml || ("v" + esc(global.APP_VERSION))) + gateInstallLink();
     var gi = document.getElementById("g-install");
-    if (gi) { gi.addEventListener("click", function () { showInstallHelp(); }); }
+    if (gi) { gi.addEventListener("click", function () { promptInstall(); }); }
     if (global.UI.scanPasswords) { global.UI.scanPasswords($("#gate-body")); }
   }
   function hideGate() {
@@ -499,10 +499,12 @@
 
   var sheetOpen = null;
   function showInstallHelp() {
+    global.Session.set("installAsked", true);
     var body = document.createElement("div");
     body.className = "install-sheet";
     installHelp(body);
     sheetOpen = body;
+    $("#install-banner").classList.add("hidden");
     global.UI.modal({ title: t("pwa.installTitle"), body: body, buttons: [
       { label: t("pwa.later"), value: null }
     ] }).then(function () {
@@ -531,6 +533,7 @@
      The full card once per visit; after that a small banner on the dashboard. */
   function maybeShowInstall() {
     if (isStandalone() || !state.user) { return; }
+    if (sheetOpen) { $("#install-banner").classList.add("hidden"); return; }
     if (!global.Session.get("installAsked", false) && !sheetOpen && $("#modal-host").classList.contains("hidden")) {
       showInstallHelp();
       return;

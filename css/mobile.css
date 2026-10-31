@@ -165,3 +165,8 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
 .names-table .np-select { width: 100%; min-width: 210px; }
 .names-table .np-custom { width: 100%; margin-top: 6px; }
 .names-table tr.np-changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* stacking: dialogs above the sign-in screen and the banners; busy and toasts on top */
+.modal-host { z-index: 75; }
+.busy { z-index: 85; }
+.toast-host { z-index: 90; }
