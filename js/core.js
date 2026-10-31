@@ -388,6 +388,24 @@
     }
   };
 
+  /* Credits: who built the app, with links (open in a new tab). */
+  var DEVELOPER = {
+    name: "Mohamed Badr",
+    linkedin: "https://www.linkedin.com/in/mohamed-badr-95283b278",
+    portfolio: "https://mohamed-badr-nine.vercel.app/"
+  };
+  function creditsHtml(extraClass) {
+    function link(href, label, icon) {
+      return '<a class="credit-link" href="' + href + '" target="_blank" rel="noopener noreferrer">' + icon + "<span>" + label + "</span></a>";
+    }
+    var inIcon = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9.5 9h3.8v1.7h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V21h-4z"/></svg>';
+    var webIcon = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15.7 15.7 0 0 0-1.4-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8.2 8.2 0 0 1 0-4h3.4a16.5 16.5 0 0 0 0 4zm.8 2h3a15.7 15.7 0 0 0 1.4 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.4-3.6C8.9 5.5 8.4 6.7 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14.7 14.7 0 0 1 0-4h4.6a14.7 14.7 0 0 1 0 4zm.2 5.6c.6-1.1 1.1-2.3 1.4-3.6h3a8 8 0 0 1-4.4 3.6zm1.8-5.6a16.5 16.5 0 0 0 0-4h3.4a8.2 8.2 0 0 1 0 4z"/></svg>';
+    return '<div class="credits' + (extraClass ? " " + extraClass : "") + '">' +
+      '<div class="credit-by">' + esc(global.t ? global.t("credit.by") : "Developed by:") + " <b>" + esc(DEVELOPER.name) + "</b></div>" +
+      '<div class="credit-links">' + link(DEVELOPER.linkedin, "LinkedIn", inIcon) + link(DEVELOPER.portfolio, "Portfolio", webIcon) + "</div></div>";
+  }
+  global.Credits = { developer: DEVELOPER, html: creditsHtml };
+
   global.Prefs = Prefs;
   global.Session = Session;
   global.Fmt = Fmt;

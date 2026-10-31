@@ -170,3 +170,15 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
 .modal-host { z-index: 75; }
 .busy { z-index: 85; }
 .toast-host { z-index: 90; }
+
+/* credits (developer + links) */
+.credits { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: .82rem; color: var(--text-soft); }
+.credits b { color: var(--text); font-weight: 650; }
+.credit-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.credit-link { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg-raised); color: var(--accent); font-weight: 600; font-size: .8rem; text-decoration: none; }
+.credit-link:hover { background: var(--accent-soft); }
+.credits-gate { align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.credits-nav { margin-top: 0; font-size: .74rem; }
+.credits-nav .credit-link { padding: 3px 9px; font-size: .74rem; }
+.more-about .credits { margin-top: 8px; }

@@ -7,7 +7,7 @@
 (function (global) {
   "use strict";
 
-  global.APP_VERSION = "1.1.3";
+  global.APP_VERSION = "1.1.4";
 
   var esc = global.Util.esc;
   var t = global.t;
@@ -53,7 +53,7 @@
     $("#gate-title").textContent = t("app.name");
     $("#gate-sub").textContent = title || t("app.tagline");
     $("#gate-body").innerHTML = bodyHtml;
-    $("#gate-foot").innerHTML = (footHtml || ("v" + esc(global.APP_VERSION))) + gateInstallLink();
+    $("#gate-foot").innerHTML = (footHtml || ("v" + esc(global.APP_VERSION))) + gateInstallLink() + global.Credits.html("credits-gate");
     var gi = document.getElementById("g-install");
     if (gi) { gi.addEventListener("click", function () { promptInstall(); }); }
     if (global.UI.scanPasswords) { global.UI.scanPasswords($("#gate-body")); }
@@ -251,7 +251,13 @@
     setTimeout(maybeShowInstall, 1500);
   }
 
+  function paintCredits() {
+    var nf = document.getElementById("nav-credits");
+    if (nf && !nf.innerHTML) { nf.innerHTML = global.Credits.html("credits-nav"); }
+  }
+
   function paintUserChip() {
+    paintCredits();
     var name = state.user ? state.user.name : "";
     $("#user-name-label").textContent = name;
     $("#user-avatar").textContent = state.user ? global.Views.initials(name) : "?";
@@ -437,7 +443,9 @@
         (S.isAdmin() ? item("admin", ic.admin, t("nav.admin"), "") : "") +
         (isStandalone() ? "" : item("install", ic.phone, t("pwa.installTitle"), "")) +
         item("signout", ic.out, t("profile.signOut"), "", "danger") +
-      "</div></div>";
+      "</div></div>" +
+      '<div class="card more-about"><div class="small faint">' + esc(t("app.name")) + " v" + esc(global.APP_VERSION) +
+        " \u00b7 " + esc(t("org.short")) + " " + esc(t("org.dept")) + "</div>" + global.Credits.html() + "</div>";
     $$("[data-more]").forEach(function (b) {
       b.addEventListener("click", function () {
         var r = b.getAttribute("data-more");

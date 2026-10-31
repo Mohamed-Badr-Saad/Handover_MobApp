@@ -593,6 +593,7 @@
   var MOBILE = {
     "nav.more": "More",
     "nav.search": "Search",
+    "credit.by": "Developed by:",
     "admin.keepaliveAt": "Database wake-up: last automatic check {at} (runs daily so the free database never pauses).",
     "admin.keepaliveNone": "Database wake-up: not run yet. It runs once a day from Cloudflare after the next deployment.",
     "arcx.whoPick": "Wherever the match is wrong or missing, choose the right person from the staff list or type the name to save - it applies to every handover, comment and action with that name.",

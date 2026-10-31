@@ -1822,6 +1822,7 @@
           '<div class="small" id="install-help"></div></div>' +
         '<div class="card"><h3>' + esc(t("pwa.aboutTitle")) + "</h3>" +
           '<p class="small faint" style="margin:0">' + esc(t("pwa.about", { v: global.APP_VERSION || "" })) + "</p>" +
+          global.Credits.html() +
           '<div class="btn-row" style="margin-top:10px"><button class="btn sm ghost" id="app-update">' + esc(t("pwa.checkUpdate")) + "</button></div></div>" +
       "</div></div>";
 
