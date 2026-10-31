@@ -1,9 +1,22 @@
-// Cloudflare Worker that only serves the Plant Handover app files (no code runs on the server).
+// Cloudflare Worker for Plant Handover:
+//  - serves the app files (assets)
+//  - wakes the Supabase database once a day so the free project never pauses
 // Used when this folder is the root of the GitHub repo connected to Cloudflare.
 {
   "name": "handover-mobapp",
   "compatibility_date": "2025-09-01",
+  "main": "worker/keepalive.js",
   "assets": {
-    "directory": "./"
+    "directory": "./",
+    "binding": "ASSETS"
+  },
+  // every day at 05:17 UTC (07:17 Cairo time)
+  "triggers": {
+    "crons": ["17 5 * * *"]
+  },
+  // public values only (same as js/config.js) - never put the database password here
+  "vars": {
+    "SUPABASE_URL": "https://shqyrcdquakkavucahxl.supabase.co",
+    "SUPABASE_KEY": "sb_publishable_m_LTcdckErOdxIM89BN9wA_tHU8ZUAg"
   }
 }

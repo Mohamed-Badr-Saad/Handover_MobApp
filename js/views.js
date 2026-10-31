@@ -1908,7 +1908,8 @@
 
       '<div class="card"><h3>' + esc(t("admin.backup")) + "</h3>" +
         '<p class="small faint">' + esc(t("admin.backupDesc")) + "</p>" +
-        '<div class="btn-row"><button class="btn" id="backup">' + esc(t("admin.backup")) + "</button></div></div>" +
+        '<div class="btn-row"><button class="btn" id="backup">' + esc(t("admin.backup")) + "</button></div>" +
+        '<p class="small faint" id="keepalive-status" style="margin:10px 0 0"></p></div>' +
 
       '<div class="card"><h3>' + esc(t("folder.title")) + "</h3>" +
         '<p class="small faint">' + esc(t("folder.cardDesc")) + "</p>" +
@@ -2153,6 +2154,15 @@
     });
 
     $("#move-open").addEventListener("click", function () { go("#/move-data"); });
+    // the daily wake-up that keeps the free database from pausing (Cloudflare cron)
+    S.client.from("settings").select("value").eq("key", "keepalive").maybeSingle().then(function (r) {
+      var el = $("#keepalive-status");
+      if (!el) { return; }
+      var at = r && r.data && r.data.value ? r.data.value.at : null;
+      var late = !at || (Date.now() - new Date(at).getTime()) > 3 * 864e5;
+      el.textContent = at ? t("admin.keepaliveAt", { at: global.Fmt.dateTime(at) }) : t("admin.keepaliveNone");
+      el.style.color = late ? "var(--warn)" : "";
+    }, function () { /* informational only */ });
     $("#delete-open").addEventListener("click", function () { go("#/delete-handovers"); });
   }
 

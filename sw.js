@@ -4,7 +4,7 @@
    Data never goes through this cache: Supabase requests pass straight by.
    Change VERSION whenever any app file changes - phones then pick up the new
    files and the app offers "Reload". */
-var VERSION = "ph-2026-10-31-6";
+var VERSION = "ph-2026-10-31-7";
 var SHELL = [
   "./",
   "index.html",

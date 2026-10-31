@@ -7,7 +7,7 @@
 (function (global) {
   "use strict";
 
-  global.APP_VERSION = "1.1.2";
+  global.APP_VERSION = "1.1.3";
 
   var esc = global.Util.esc;
   var t = global.t;
