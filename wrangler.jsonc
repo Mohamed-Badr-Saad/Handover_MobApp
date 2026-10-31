@@ -1,0 +1,9 @@
+// Cloudflare Worker that only serves the Plant Handover app files (no code runs on the server).
+// Used when this folder is the root of the GitHub repo connected to Cloudflare.
+{
+  "name": "handover-mobapp",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./"
+  }
+}

@@ -1,0 +1,9 @@
+# Files in this folder that must NOT be published on the website
+supabase/
+*.md
+wrangler.jsonc
+.gitignore
+.assetsignore
+.git/
+node_modules/
+.wrangler/
