@@ -1902,15 +1902,21 @@
 
       '<div class="card"><h3>' + esc(t("del.adminTitle")) + "</h3>" +
         '<p class="small faint">' + esc(t("del.adminDesc")) + "</p>" +
+        '<div class="btn-row" style="margin-bottom:10px"><button class="btn sm" id="del-restore-all">' + esc(t("del2.restoreAll")) + "</button>" +
+          '<button class="btn sm danger" id="del-empty">' + esc(t("del2.emptyBin")) + "</button></div>" +
         '<div id="deleted-list"><p class="faint small">' + esc(t("common.loading")) + "</p></div></div>" +
 
       '<div class="card"><h3>' + esc(t("admin.backup")) + "</h3>" +
         '<p class="small faint">' + esc(t("admin.backupDesc")) + "</p>" +
         '<div class="btn-row"><button class="btn" id="backup">' + esc(t("admin.backup")) + "</button></div></div>" +
 
-      '<div class="card"><h3>' + esc(t("move.title")) + "</h3>" +
-        '<p class="small faint">' + esc(t("move.desc")) + "</p>" +
-        '<div class="btn-row"><button class="btn" id="move-open">' + esc(t("move.open")) + "</button></div></div>";
+      '<div class="card"><h3>' + esc(t("folder.title")) + "</h3>" +
+        '<p class="small faint">' + esc(t("folder.cardDesc")) + "</p>" +
+        '<div class="btn-row"><button class="btn primary" id="move-open">' + esc(t("folder.open")) + "</button></div></div>" +
+
+      '<div class="card"><h3>' + esc(t("del2.title")) + "</h3>" +
+        '<p class="small faint">' + esc(t("del2.cardDesc")) + "</p>" +
+        '<div class="btn-row"><button class="btn danger" id="delete-open">' + esc(t("del2.open")) + "</button></div></div>";
 
     /* ---- areas ---- */
     function renderAreas() {
@@ -2092,6 +2098,16 @@
       });
     }
     renderDeleted();
+    $("#del-restore-all").addEventListener("click", async function () {
+      var ok = await global.UI.confirm(t("del2.restoreAllConfirm"), { okLabel: t("del2.restoreAll") });
+      if (!ok) { return; }
+      global.UI.busy(true, t("common.saving"));
+      try { var n = await S.restoreAll(); global.UI.toast(t("del2.restored", { n: global.Fmt.num(n) }), "ok"); }
+      catch (e) { global.UI.toast(t("err.write"), "err"); }
+      global.UI.busy(false);
+      renderDeleted();
+    });
+    $("#del-empty").addEventListener("click", function () { go("#/delete-handovers?state=deleted"); });
 
     /* ---- imports, one set per database ---- */
     async function renderArchiveStatus() {
@@ -2111,11 +2127,33 @@
     $$("[data-bulk-open]").forEach(function (b) {
       b.addEventListener("click", function () { go("#/handover/import?mode=admin&db=" + b.getAttribute("data-bulk-open")); });
     });
+    $$("[data-arc-clear]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        var db = b.getAttribute("data-arc-clear");
+        var info = S.archiveInfo(db);
+        var n = info ? info.count : 0;
+        if (!n) { global.UI.toast(t("arc.clearNone")); return; }
+        var ok = await global.UI.confirm(t("arc.clearConfirm", { n: global.Fmt.num(n), db: t("view.pill." + db) }),
+          { title: t("arc.clear"), okLabel: t("arc.clearGo", { n: global.Fmt.num(n) }), danger: true });
+        if (!ok) { return; }
+        global.UI.busy(true, t("arc.clearing", { n: 0 }));
+        try {
+          var done = await S.clearArchive(db, function (k) {
+            var el = document.getElementById("busy-label");
+            if (el) { el.textContent = t("arc.clearing", { n: global.Fmt.num(k) }); }
+          });
+          global.UI.toast(t("arc.cleared", { n: global.Fmt.num(done) }), "ok");
+        } catch (e) { global.UI.toast(t("err.write") + " " + ((e && e.message) || ""), "err"); }
+        global.UI.busy(false);
+        renderArchiveStatus();
+      });
+    });
     $$("[data-arc-open]").forEach(function (b) {
       b.addEventListener("click", function () { go("#/archive-import?db=" + b.getAttribute("data-arc-open")); });
     });
 
     $("#move-open").addEventListener("click", function () { go("#/move-data"); });
+    $("#delete-open").addEventListener("click", function () { go("#/delete-handovers"); });
   }
 
   function dbCard(db) {
@@ -2124,7 +2162,8 @@
       "<h4>" + esc(t("db.archive")) + "</h4>" +
       '<p class="small" id="arc-status-' + db + '" style="margin:0 0 4px"></p>' +
       '<p class="small faint" style="margin:0 0 8px">' + esc(t("db.archiveDesc")) + "</p>" +
-      '<div class="btn-row"><button class="btn" id="arc-open-' + db + '" data-arc-open="' + db + '">' + esc(t("db.archiveOpen")) + "</button></div>" +
+      '<div class="btn-row"><button class="btn" id="arc-open-' + db + '" data-arc-open="' + db + '">' + esc(t("db.archiveOpen")) + "</button>" +
+        '<button class="btn danger ghost" id="arc-clear-' + db + '" data-arc-clear="' + db + '">' + esc(t("arc.clear")) + "</button></div>" +
       "<h4>" + esc(t("db.bulk")) + "</h4>" +
       '<p class="small faint" style="margin:0 0 8px">' + esc(t("db.bulkDesc." + db)) + "</p>" +
       '<div class="btn-row"><button class="btn" id="bulk-tpl-' + db + '" data-bulk-tpl="' + db + '">' + esc(t("imp.adminDownload")) + "</button>" +

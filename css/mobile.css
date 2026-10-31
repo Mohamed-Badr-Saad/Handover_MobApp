@@ -153,3 +153,9 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
 @media (display-mode: standalone) {
   .gate-foot { padding-bottom: 4px; }
 }
+
+/* install card */
+.install-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.install-hero img { border-radius: 14px; flex: none; box-shadow: var(--shadow); }
+.install-big { width: 100%; min-height: 48px; font-size: 1.02rem; }
+.install-sheet .install-steps { margin-top: 10px; }

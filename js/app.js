@@ -7,7 +7,7 @@
 (function (global) {
   "use strict";
 
-  global.APP_VERSION = "1.0.0";
+  global.APP_VERSION = "1.1.0";
 
   var esc = global.Util.esc;
   var t = global.t;
@@ -53,7 +53,9 @@
     $("#gate-title").textContent = t("app.name");
     $("#gate-sub").textContent = title || t("app.tagline");
     $("#gate-body").innerHTML = bodyHtml;
-    $("#gate-foot").innerHTML = footHtml || ("v" + esc(global.APP_VERSION));
+    $("#gate-foot").innerHTML = (footHtml || ("v" + esc(global.APP_VERSION))) + gateInstallLink();
+    var gi = document.getElementById("g-install");
+    if (gi) { gi.addEventListener("click", function () { showInstallHelp(); }); }
     if (global.UI.scanPasswords) { global.UI.scanPasswords($("#gate-body")); }
   }
   function hideGate() {
@@ -246,7 +248,7 @@
     var start = parsePath(global.location.hash);
     if (!global.location.hash || start.parts[0] === "dashboard") { navigate("dashboard", true); }
     else { state.parts = start.parts; state.query = start.query; render(); }
-    setTimeout(maybeShowInstall, 2500);
+    setTimeout(maybeShowInstall, 1500);
   }
 
   function paintUserChip() {
@@ -362,7 +364,7 @@
     $$(".nav-item").forEach(function (el) {
       var key = el.getAttribute("data-route");
       el.classList.toggle("active", key === head || (key === "handovers" && head === "handover") ||
-        (key === "admin" && (head === "archive-import" || head === "move-data")));
+        (key === "admin" && (head === "archive-import" || head === "move-data" || head === "delete-handovers")));
     });
     $$(".tab").forEach(function (el) { el.classList.toggle("active", el.getAttribute("data-tab") === tabKey); });
     document.body.classList.remove("search-open");
@@ -391,6 +393,7 @@
       else if (head === "admin") { await global.Views.admin(); }
       else if (head === "archive-import") { await global.Views.archiveImport(query); }
       else if (head === "move-data") { await global.MoveData.page(); }
+      else if (head === "delete-handovers") { await global.MoveData.deletePage(query); }
       else if (head === "search") { await global.Views.search(query.q || ""); }
       else if (head === "more") { more(); }
       else { navigate("dashboard", true); }
@@ -454,22 +457,58 @@
 
   /* ============================ INSTALL / UPDATE ============================ */
 
+  /* Which browser are we in - decides how installing works. */
+  function platform() {
+    var ua = navigator.userAgent || "";
+    if (isIos()) { return /crios|fxios|edgios|opios|gsa\//i.test(ua) ? "ios-other" : "ios-safari"; }
+    if (/android/i.test(ua)) { return /chrome|samsungbrowser|edga?\//i.test(ua) && !/; wv\)|fb_iab|instagram/i.test(ua) ? "android" : "android-other"; }
+    if (/edg\/|chrome\//i.test(ua)) { return "desktop"; }
+    return "desktop-other";
+  }
+
+  function installSteps() {
+    var p = platform();
+    var keys = {
+      "android": ["pwa.stepAndroid1", "pwa.stepAndroid2"],
+      "android-other": ["pwa.stepAndroidOther"],
+      "ios-safari": ["pwa.stepIos1", "pwa.stepIos2", "pwa.stepIos3"],
+      "ios-other": ["pwa.stepIosOther1", "pwa.stepIosOther2"],
+      "desktop": ["pwa.stepDesktop"],
+      "desktop-other": ["pwa.stepDesktopOther"]
+    }[p];
+    return '<ol class="install-steps">' + keys.map(function (k) { return "<li>" + esc(t(k)) + "</li>"; }).join("") + "</ol>";
+  }
+
+  /* Card / dialog body: one-tap install where the browser allows it,
+     otherwise the steps for this phone. */
   function installHelp(el) {
     if (!el) { return; }
     if (isStandalone()) { el.innerHTML = "<p>" + esc(t("pwa.installed")) + "</p>"; return; }
-    var safari = /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(navigator.userAgent);
-    el.innerHTML = '<ol class="install-steps">' +
-      "<li>" + esc(t("pwa.installAndroid")) + "</li>" +
-      "<li>" + esc(isIos() && !safari ? t("pwa.installIosOther") : t("pwa.installIos")) + "</li></ol>" +
-      (state.installPrompt ? '<button class="btn primary" style="margin-top:10px" id="ih-go">' + esc(t("pwa.installNow")) + "</button>" : "");
-    var b = el.querySelector("#ih-go");
+    el.innerHTML =
+      '<div class="install-hero"><img src="img/icon-192.png" alt="" width="64" height="64">' +
+        "<div><b>" + esc(t("app.name")) + '</b><div class="small faint">' + esc(t("pwa.whyInstall")) + "</div></div></div>" +
+      (state.installPrompt
+        ? '<button class="btn primary install-big" data-install-now>' + esc(t("pwa.installNow")) + "</button>" +
+          '<p class="small faint" style="margin:8px 0 0">' + esc(t("pwa.orManually")) + "</p>"
+        : "") +
+      installSteps() +
+      '<p class="small faint" style="margin:8px 0 0">' + esc(t("pwa.alreadyInstalled")) + "</p>";
+    var b = el.querySelector("[data-install-now]");
     if (b) { b.addEventListener("click", promptInstall); }
   }
 
+  var sheetOpen = null;
   function showInstallHelp() {
     var body = document.createElement("div");
+    body.className = "install-sheet";
     installHelp(body);
-    global.UI.modal({ title: t("pwa.installTitle"), body: body, buttons: [{ label: t("common.close"), value: null }] });
+    sheetOpen = body;
+    global.UI.modal({ title: t("pwa.installTitle"), body: body, buttons: [
+      { label: t("pwa.later"), value: null }
+    ] }).then(function () {
+      sheetOpen = null;
+      global.Session.set("installAsked", true);
+    });
   }
 
   async function promptInstall() {
@@ -477,17 +516,36 @@
     if (!p) { showInstallHelp(); return; }
     state.installPrompt = null;
     $("#install-banner").classList.add("hidden");
-    try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ }
+    try {
+      p.prompt();
+      var choice = await p.userChoice;
+      if (choice && choice.outcome === "accepted") {
+        global.UI.toast(t("pwa.installing"), "ok");
+        var close = document.getElementById("modal-close");
+        if (sheetOpen && close) { close.click(); }
+      }
+    } catch (e) { /* dismissed */ }
   }
 
+  /* Opened in Chrome / Safari instead of the installed app: invite to install.
+     The full card once per visit; after that a small banner on the dashboard. */
   function maybeShowInstall() {
-    if (isStandalone() || !state.user || (state.parts[0] || "dashboard") !== "dashboard") { return; }
-    if (Date.now() - Number(global.Prefs.get("installLater", 0)) < 7 * 864e5) { return; }
-    var ios = isIos();
-    if (!state.installPrompt && !ios) { return; }
-    $("#install-text").textContent = ios ? t("pwa.installIos") : t("pwa.installBanner");
-    $("#install-go").classList.toggle("hidden", ios);
+    if (isStandalone() || !state.user) { return; }
+    if (!global.Session.get("installAsked", false) && !sheetOpen && $("#modal-host").classList.contains("hidden")) {
+      showInstallHelp();
+      return;
+    }
+    if ((state.parts[0] || "dashboard") !== "dashboard") { return; }
+    if (Date.now() - Number(global.Prefs.get("installLater", 0)) < 864e5) { return; }
+    $("#install-text").textContent = state.installPrompt ? t("pwa.installBanner") : t("pwa.installBannerManual");
+    $("#install-go").textContent = state.installPrompt ? t("pwa.installNow") : t("pwa.howTo");
     $("#install-banner").classList.remove("hidden");
+  }
+
+  /* On the sign-in screen: a small install link under the card. */
+  function gateInstallLink() {
+    if (isStandalone()) { return ""; }
+    return '<div style="margin-top:10px"><button class="btn sm ghost" id="g-install">' + esc(t("pwa.installTitle")) + "</button></div>";
   }
 
   function wireServiceWorker() {
@@ -584,9 +642,13 @@
     global.addEventListener("beforeinstallprompt", function (e) {
       e.preventDefault();
       state.installPrompt = e;
+      if (sheetOpen) { installHelp(sheetOpen); return; }       // add the one-tap button to the open card
       if (state.user) { maybeShowInstall(); }
     });
-    global.addEventListener("appinstalled", function () { $("#install-banner").classList.add("hidden"); });
+    global.addEventListener("appinstalled", function () {
+      $("#install-banner").classList.add("hidden");
+      global.UI.toast(t("pwa.installedNow"), "ok");
+    });
     $("#install-go").addEventListener("click", promptInstall);
     $("#install-later").addEventListener("click", function () {
       global.Prefs.set("installLater", Date.now());

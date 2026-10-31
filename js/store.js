@@ -287,10 +287,15 @@
 
   /* ---------------------------------------------------------------- master lists */
 
+  /* Every row, 1000 at a time. A second sort column keeps the pages stable
+     when many rows share the same value (e.g. tags saved in one go). */
   async function fetchAll(table, cols, orderCol, filter) {
     var out = [], from = 0, page = 1000;
+    var tie = table === "equipment_tags" ? "tag_no" : "id";
     for (;;) {
-      var q = sb.from(table).select(cols || "*").order(orderCol, { ascending: true }).range(from, from + page - 1);
+      var q = sb.from(table).select(cols || "*").order(orderCol, { ascending: true });
+      if (orderCol !== tie) { q = q.order(tie, { ascending: true }); }
+      q = q.range(from, from + page - 1);
       if (filter) { q = filter(q); }
       var rows = must(await q, table) || [];
       out = out.concat(rows);
@@ -318,7 +323,7 @@
     master.areas = results[1];
     try { await loadTags(); }
     catch (e2) {
-      var st = await idb.get("tags");
+      var st = await idb.get("tags2");
       if (!st || !isNetworkError(e2)) { throw e2; }
       master.tags = (st.list || []).map(tagOut).filter(function (t) { return t.active !== false; });
     }
@@ -326,15 +331,16 @@
   }
 
   async function loadTags(full) {
-    var saved = full ? null : await idb.get("tags");
+    var saved = full ? null : await idb.get("tags2");
     var since = saved && saved.since;
     var map = {};
     if (saved && saved.list) { saved.list.forEach(function (t) { map[t.tag_no] = t; }); }
     var rows = await fetchAll("equipment_tags", "*", "updated_at", since ? function (q) { return q.gt("updated_at", since); } : null);
     rows.forEach(function (t) { map[t.tag_no] = t; if (!since || t.updated_at > since) { since = t.updated_at; } });
     var list = Object.keys(map).map(function (k) { return map[k]; });
-    master.tags = list.map(tagOut).filter(function (t) { return t.active !== false; });
-    idb.set("tags", { list: list, since: since });
+    master.allTags = list.map(tagOut);
+    master.tags = master.allTags.filter(function (t) { return t.active !== false; });
+    idb.set("tags2", { list: list, since: since });
   }
 
   function users() { return master.staff; }
@@ -344,6 +350,7 @@
   }
   function canSignIn(u) { return !!u && u.active !== false && (SIGN_IN_ROLES.indexOf(u.role || "") >= 0 || u.isAdmin); }
   function tags() { return master.tags; }
+  function allTags() { return master.allTags || master.tags; }
   function tagByNumber(no) {
     var n = String(no || "").toUpperCase();
     for (var i = 0; i < master.tags.length; i++) { if (master.tags[i].tagNo === n) { return master.tags[i]; } }
@@ -442,6 +449,8 @@
 
   /* ---------------------------------------------------------------- views (managers) */
 
+  function isAdmin() { return !!(me && me.isAdmin); }
+
   function viewerIsManager() { return !!(me && me.role === "manager"); }
   function setView(v) { currentView = v === "managers" ? "managers" : "engineers"; cache.sorted = null; }
   function getView() { return viewerIsManager() ? currentView : "engineers"; }
@@ -467,10 +476,27 @@
       var saved = await idb.get(key);
       cache.map = saved && saved.map ? saved.map : {};
       cache.since = saved ? saved.since : null;
+      cache.reset = saved ? saved.reset || "" : "";
+      cache.tsince = saved ? saved.tsince || null : null;
+      // a list saved by an older version has no deletion cursor: start afresh
+      if (cache.since && !cache.tsince) { cache.map = {}; cache.since = null; }
     }
     if (!force && Date.now() - cache.at < 15000) { return; }
     if (!global.navigator.onLine && Object.keys(cache.map).length) { return; }
+    // An administrator removed a set of entries (e.g. old sheets): start the list afresh.
+    try {
+      var rs = must(await sb.from("settings").select("value").eq("key", "list_reset").maybeSingle(), "settings");
+      var mark = rs && rs.value ? String(rs.value.at || "") : "";
+      if (mark !== (cache.reset || "")) { cache.map = {}; cache.since = null; cache.sorted = null; cache.reset = mark; }
+    } catch (e) { /* keep the saved list */ }
     var since = cache.since, from = 0, page = 1000, latest = since, changed = 0;
+    // Starting from nothing: deletions so far do not matter, only those from now on.
+    if (!since) {
+      try {
+        var last = must(await sb.from("handover_tombstones").select("at").order("at", { ascending: false }).limit(1), "tombstones") || [];
+        cache.tsince = last.length ? last[0].at : "1970-01-01T00:00:00Z";
+      } catch (e) { cache.tsince = cache.tsince || "1970-01-01T00:00:00Z"; }
+    }
     for (;;) {
       var q = sb.from("handovers").select(HEADER_COLS).order("changed_at", { ascending: true }).order("id", { ascending: true })
         .range(from, from + page - 1);
@@ -483,11 +509,28 @@
       if (rows.length < page) { break; }
       from += page;
     }
+    // Handovers deleted for good since last time: drop them from the saved
+    // list, so they no longer appear in lists, counts or search on this phone.
+    var gone = 0;
+    if (since && cache.tsince) {
+      var tfrom = 0, tl = cache.tsince;
+      for (;;) {
+        var trows;
+        try {
+          trows = must(await sb.from("handover_tombstones").select("id,at").gt("at", cache.tsince)
+            .order("at", { ascending: true }).range(tfrom, tfrom + 999), "tombstones") || [];
+        } catch (e) { break; }
+        trows.forEach(function (r) { if (cache.map[r.id]) { delete cache.map[r.id]; gone++; } if (r.at > tl) { tl = r.at; } });
+        if (trows.length < 1000) { break; }
+        tfrom += 1000;
+      }
+      if (tl !== cache.tsince) { cache.tsince = tl; gone = gone || -1; }
+    }
     cache.at = Date.now();
-    if (changed) {
+    if (changed || gone || !since) {
       cache.since = latest;
       cache.sorted = null;
-      idb.set(key, { map: cache.map, since: cache.since });
+      idb.set(key, { map: cache.map, since: cache.since, reset: cache.reset || "", tsince: cache.tsince || null });
     }
   }
 
@@ -638,18 +681,77 @@
     invalidate();
   }
   async function restoreHandover(id) {
-    must(await sb.from("handovers").update({ deleted_at: null, deleted_by: null, deleted_by_name: null }).eq("id", id), "restore");
+    if (isAdmin()) { must(await sb.rpc("admin_restore_handovers", { p_ids: [id] }), "restore"); }
+    else { must(await sb.from("handovers").update({ deleted_at: null, deleted_by: null, deleted_by_name: null }).eq("id", id), "restore"); }
     invalidate();
-    return getHandover(id);
+    var rec = null;
+    try { rec = await getHandover(id); } catch (e) { rec = null; }
+    return rec || { id: id, title: "" };
+  }
+  async function restoreAll() {
+    var n = Number(must(await sb.rpc("admin_restore_handovers", { p_ids: null }), "restore")) || 0;
+    invalidate();
+    return n;
   }
   async function listDeleted() {
-    var rows = must(await sb.from("handovers").select(HEADER_COLS + ",deleted_by").not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false }).limit(200), "deleted") || [];
+    var rows = isAdmin()
+      ? must(await sb.rpc("admin_deleted_list", { p_limit: 500 }), "deleted") || []
+      : must(await sb.from("handovers").select(HEADER_COLS + ",deleted_by").not("deleted_at", "is", null)
+          .order("deleted_at", { ascending: false }).limit(200), "deleted") || [];
     return rows.map(function (r) {
       var h = headerOut(r);
       h.deletedBy = { id: r.deleted_by || null, name: r.deleted_by_name || "" };
       return h;
     });
+  }
+
+  /* ---------------------------------------------------------------- administrator: delete by filter */
+
+  function cleanFilter(f) {
+    var out = {};
+    Object.keys(f || {}).forEach(function (k) { if (f[k] !== "" && f[k] !== null && f[k] !== undefined) { out[k] = f[k]; } });
+    return out;
+  }
+  async function adminCount(filter) {
+    return must(await sb.rpc("admin_count_handovers", { p: cleanFilter(filter) }), "count") || {};
+  }
+  /* mode "recoverable" (to Deleted handovers) or "permanent". Runs in batches
+     until nothing matches; removes attachment files of permanently deleted ones. */
+  async function adminDelete(filter, mode, onProgress) {
+    var total = 0, files = 0, failedFiles = 0;
+    for (;;) {
+      var r = must(await sb.rpc("admin_delete_handovers", { p: cleanFilter(filter), p_mode: mode, p_limit: 1000 }), "delete") || {};
+      var n = Number(r.n) || 0;
+      total += n;
+      var paths = r.paths || [];
+      for (var i = 0; i < paths.length; i += 100) {
+        var part = paths.slice(i, i + 100);
+        var res = await sb.storage.from("attachments").remove(part);
+        if (res.error) { failedFiles += part.length; } else { files += part.length; }
+      }
+      if (onProgress) { onProgress(total); }
+      if (n === 0) { break; }
+    }
+    invalidate();
+    await syncHeaders(true);
+    return { count: total, files: files, failedFiles: failedFiles };
+  }
+
+  /* ---------------------------------------------------------------- administrator: export */
+
+  async function exportRecords(onProgress) {
+    var out = [], after = null;
+    for (;;) {
+      var page = must(await sb.rpc("admin_export_page", { p_after: after, p_limit: 500 }), "export") || [];
+      out = out.concat(page);
+      if (onProgress) { onProgress(out.length); }
+      if (page.length < 500) { break; }
+      after = page[page.length - 1].h.id;
+    }
+    return out;
+  }
+  async function downloadFile(path) {
+    return must(await sb.storage.from("attachments").download(path), "download");
   }
 
   async function appendComment(id, comment) {
@@ -791,6 +893,20 @@
   }
 
   var archiveStats = {};
+  /* Administrator: remove every old-sheet entry of one database (in batches). */
+  async function clearArchive(db, onProgress) {
+    var total = 0;
+    for (;;) {
+      var n = Number(must(await sb.rpc("admin_clear_archive", { p_db: db === "managers" ? "managers" : "engineers", p_limit: 1500 }), "clear")) || 0;
+      total += n;
+      if (onProgress) { onProgress(total); }
+      if (n === 0) { break; }
+    }
+    cache.map = {}; cache.since = null; cache.sorted = null; cache.at = 0;
+    await loadArchive();
+    return total;
+  }
+
   async function loadArchive() {
     var rows = [];
     try { rows = must(await sb.rpc("archive_info"), "archive") || []; } catch (e) { rows = []; }
@@ -889,7 +1005,7 @@
           id: aid, handover_id: id, text: a.text || "", status: ["open", "done", "old"].indexOf(a.status) >= 0 ? a.status : "open",
           by_id: a.by && a.by.id ? a.by.id : null, by_name: a.by ? a.by.name || "" : "", at: a.at || r.created_at || now,
           done_by_id: a.doneBy && a.doneBy.id ? a.doneBy.id : null, done_by_name: a.doneBy ? a.doneBy.name || null : null,
-          done_at: a.doneAt || null, done_comment: a.doneComment || null
+          done_at: a.doneAt || null, done_comment: a.doneComment ? keepOrDerive(a.doneComment, "c:" + id) : null
         });
       });
       (rec.comments || []).forEach(function (c) {
@@ -976,12 +1092,12 @@
     // sign-in
     roster: roster, signIn: signIn, createAccount: createAccount, signOut: signOut, loadMe: loadMe,
     currentSession: currentSession, changePassword: changePassword,
-    me: function () { return me; }, isAdmin: function () { return !!(me && me.isAdmin); },
+    me: function () { return me; }, isAdmin: isAdmin,
     connected: function () { return !!me; },
     isOffline: function () { return offline || !global.navigator.onLine; }, isNetworkError: isNetworkError,
     // master lists
     loadMaster: loadMaster, loadTags: loadTags, users: users, userById: userById, canSignIn: canSignIn,
-    tags: tags, tagByNumber: tagByNumber, upperEquipmentList: upperEquipmentList, structure: structure,
+    tags: tags, allTags: allTags, tagByNumber: tagByNumber, upperEquipmentList: upperEquipmentList, structure: structure,
     addArea: addArea, addAreas: addAreas, removeArea: removeArea,
     importTags: importTags, upsertTag: upsertTag, bulkSetArea: bulkSetArea,
     upsertUser: upsertUser, setUserActive: setUserActive, loadStandardStaff: loadStandardStaff,
@@ -993,14 +1109,15 @@
     searchText: searchText, searchIds: searchIds, searchComments: searchComments,
     getHandover: getHandover, getHandovers: getHandovers, saveHandover: saveHandover,
     saveHandoverChecked: saveHandoverChecked, setStatus: setStatus,
-    deleteHandover: deleteHandover, restoreHandover: restoreHandover, listDeleted: listDeleted,
+    deleteHandover: deleteHandover, restoreHandover: restoreHandover, listDeleted: listDeleted, restoreAll: restoreAll,
+    adminCount: adminCount, adminDelete: adminDelete, exportRecords: exportRecords, downloadFile: downloadFile,
     appendComment: appendComment, addAction: addAction,
     putAttachment: putAttachment, appendAttachments: appendAttachments, getAttachmentFile: getAttachmentFile,
     // notifications
     addNotification: addNotification, listNotifications: listNotifications, loadReads: loadReads,
     isUnread: isUnread, markRead: markRead, markAllRead: markAllRead,
     // imports, archive, backup
-    addHandovers: addHandovers, importArchive: importArchive, loadArchive: loadArchive, archiveInfo: archiveInfo,
+    addHandovers: addHandovers, importArchive: importArchive, clearArchive: clearArchive, loadArchive: loadArchive, archiveInfo: archiveInfo,
     archivedRecord: archivedRecord, audienceOfId: audienceOfId, isArchiveId: isArchiveId, exportBackup: exportBackup,
     moveRecords: moveRecords, deleteByLegacyIds: deleteByLegacyIds, attachmentIdsOf: attachmentIdsOf, moveAttachment: moveAttachment, keepOrDerive: keepOrDerive, isUuid: isUuid,
     // compatibility
