@@ -3077,6 +3077,7 @@
       var team = [];
       names.slice(1).forEach(function (n) {
         var p = person(n);
+        p.spelling = n;
         if (author.id ? p.id === author.id : p.name === author.name) { return; }
         if (!team.some(function (m) { return m.name === p.name; })) {
           team.push(p.id ? { id: p.id, name: p.name, role: p.role || "engineer", jobTitle: "" } : { id: null, name: p.name });
@@ -3170,10 +3171,16 @@
       if (!d) { stats.undated++; } else { stats.years[d.y] = (stats.years[d.y] || 0) + 1; }
       if (tags.length) { stats.tagged++; }
       if (area) { stats.areas[area] = (stats.areas[area] || 0) + 1; }
-      var pk = (author.id || "") + "|" + author.name;
-      var ps = stats.people[pk] = stats.people[pk] || { name: author.name, id: author.id, role: author.role || "", n: 0, spellings: {} };
-      ps.n++;
-      if (names[0]) { ps.spellings[names[0]] = true; }
+      function addPerson(pp, asAuthor, spelling) {
+        if (!pp || !pp.name || pp.name === "\u2014") { return; }
+        var pk = (pp.id || "") + "|" + pp.name;
+        var ps = stats.people[pk] = stats.people[pk] || { name: pp.name, id: pp.id, role: pp.role || "", n: 0, named: 0, spellings: {} };
+        if (asAuthor) { ps.n++; } else { ps.named++; }
+        if (spelling) { ps.spellings[spelling] = true; }
+      }
+      addPerson(author, true, names[0]);
+      team.forEach(function (m) { addPerson(m, false, ""); });
+      if (progress || updAction) { addPerson(who, false, ub ? (splitNames(ub)[0] || ub) : ""); }
     });
 
     // Locations written 20+ times become plant areas, as with the first import.
@@ -3324,20 +3331,29 @@
           html += '<p class="small" style="margin:12px 0 0">' + esc(t("arcx.newAreas", { v: st.newAreas.map(function (a) { return a.id; }).join(", ") })) + "</p>";
         }
 
-        var people = Object.keys(st.people).map(function (k) { return st.people[k]; }).sort(function (a, c) { return c.n - a.n; });
+        var people = Object.keys(st.people).map(function (k) { st.people[k].pk = k; return st.people[k]; })
+          .sort(function (a, c) { return (c.n - a.n) || (c.named - a.named); });
+        var unmatched = people.filter(function (p) { return !p.id; }).length;
         html += "<h4 style=\"margin:18px 0 6px\">" + esc(t("arcx.whoTitle")) + "</h4>" +
-          '<p class="small faint" style="margin:0 0 8px">' + esc(t("arcx.whoDesc")) + "</p>" +
-          '<div style="overflow:auto;max-height:420px"><table class="table imp-table"><thead><tr>' +
+          '<p class="small faint" style="margin:0 0 8px">' + esc(t("arcx.whoDesc")) + " " + esc(t("arcx.whoPick")) + "</p>" +
+          '<div class="btn-row" style="margin:0 0 8px;align-items:center">' +
+            '<label class="check-line" style="margin:0;font-weight:500"><input type="checkbox" id="np-only"> <span>' +
+              esc(t("arcx.onlyUnmatched", { n: global.Fmt.num(unmatched) })) + "</span></label>" +
+            '<span class="small faint" id="np-changed"></span></div>' +
+          '<div style="overflow:auto;max-height:520px"><table class="table imp-table names-table"><thead><tr>' +
             "<th>" + esc(t("arcx.savedAs")) + "</th><th>" + esc(t("arcx.spellings")) + "</th><th>" + esc(t("arcx.match")) + "</th><th>" + esc(t("arcx.count")) + "</th>" +
           "</tr></thead><tbody>" +
           people.map(function (p) {
             var spell = Object.keys(p.spellings);
-            return '<tr class="' + (p.id ? "imp-ok" : "imp-warn") + '"><td><b>' + esc(p.name || t("arcx.noName")) + "</b></td>" +
-              "<td>" + esc(spell.slice(0, 6).join(", ") + (spell.length > 6 ? " +" + (spell.length - 6) : "")) + "</td>" +
-              "<td>" + esc(p.id ? t("arcx.onStaff", { role: t("role." + (p.role || "engineer")) }) : (p.name ? t("arcx.former") : "—")) + "</td>" +
-              "<td>" + global.Fmt.num(p.n) + "</td></tr>";
+            return '<tr data-pk="' + esc(p.pk) + '" data-unmatched="' + (p.id ? "0" : "1") + '">' +
+              '<td class="np-cell">' + namePicker(p) + "</td>" +
+              "<td>" + esc(spell.slice(0, 6).join(", ") + (spell.length > 6 ? " +" + (spell.length - 6) : "") || "\u2014") + "</td>" +
+              '<td class="np-status"></td>' +
+              "<td>" + global.Fmt.num(p.n) + (p.named ? ' <span class="faint small">' + esc(t("arcx.alsoNamed", { n: global.Fmt.num(p.named) })) + "</span>" : "") + "</td></tr>";
           }).join("") +
           "</tbody></table></div>";
+        peopleByPk = {};
+        people.forEach(function (p) { peopleByPk[p.pk] = p; });
 
         html += "<h4 style=\"margin:18px 0 6px\">" + esc(t("arcx.sheetsTitle")) + "</h4>" +
           '<div style="overflow:auto"><table class="table"><thead><tr><th>' + esc(t("arcx.file")) + "</th><th>" + esc(t("arcx.sheet")) +
@@ -3350,10 +3366,171 @@
       html += "</div>";
       $("#arc-result").innerHTML = html;
       $("#arc-go").addEventListener("click", function () { runArchiveImport(res); });
+      wireNamePickers();
+    }
+
+    /* ---- "Saved as": the administrator can correct any name ----
+       Each name found in the sheets can be saved as someone on the staff list,
+       as written, or as a name typed here. Choices are remembered on this
+       device for the next import of the same sheets. */
+    var peopleByPk = {}, choices = {};
+    var remembered = global.Prefs.get("arcNameChoices", {}) || {};
+    function memKey(p) { return nameTokens(Object.keys(p.spellings)[0] || p.name).join(" ") + "|" + nameTokens(p.name).join(" "); }
+    function suggestFor(p) {
+      var tk = nameTokens(Object.keys(p.spellings).concat([p.name]).join(" "));
+      var comp = nameTokens(p.name).join("");
+      return S.users().map(function (u) {
+        var ut = nameTokens(u.name), uc = ut.join(""), score = 0;
+        tk.forEach(function (x) {
+          if (ut.indexOf(x) >= 0) { score += 2; return; }
+          if (x.length < 4) { return; }
+          var near = ut.some(function (y) { return y.length >= 4 && typoDistance(x, y) <= 1; });
+          var joined = false;
+          for (var i = 0; i + 1 < ut.length; i++) { if (typoDistance(x, ut[i] + ut[i + 1]) <= 1) { joined = true; } }
+          if (near || joined) { score += 2; }
+        });
+        if (comp.length >= 5 && (uc.indexOf(comp) >= 0 || comp.indexOf(uc) >= 0)) { score += 2; }
+        return { u: u, score: score };
+      }).filter(function (x) { return x.score >= 2 && x.u.id !== p.id; })
+        .sort(function (a, b) { return b.score - a.score || String(a.u.name).localeCompare(String(b.u.name)); })
+        .slice(0, 5).map(function (x) { return x.u; });
+    }
+    function defaultChoice(p) {
+      var m = remembered[memKey(p)];
+      if (m && (m.kind !== "staff" || S.userById(m.id))) { return { kind: m.kind, id: m.id || null, name: m.kind === "staff" ? S.userById(m.id).name : m.name }; }
+      return p.id ? { kind: "staff", id: p.id, name: p.name } : { kind: "keep", id: null, name: p.name };
+    }
+    function asWritten(p) { return p.id ? (Object.keys(p.spellings)[0] || p.name) : p.name; }
+    function namePicker(p) {
+      var c = choices[p.pk] = choices[p.pk] || defaultChoice(p);
+      var people = S.users().slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      function opt(u) {
+        var v = "staff:" + u.id;
+        return '<option value="' + esc(v) + '"' + (c.kind === "staff" && c.id === u.id ? " selected" : "") + ">" +
+          esc(u.name + (u.jobTitle ? " \u2014 " + u.jobTitle : "")) + "</option>";
+      }
+      var sug = suggestFor(p);
+      var accounts = people.filter(function (u) { return ACCOUNT_ROLES_UI.indexOf(u.role || "") >= 0; });
+      var others = people.filter(function (u) { return ACCOUNT_ROLES_UI.indexOf(u.role || "") < 0; });
+      return '<select class="input np-select" data-pk="' + esc(p.pk) + '">' +
+          (p.id ? '<optgroup label="' + esc(t("arcx.pickMatched")) + '">' + opt(S.userById(p.id) || { id: p.id, name: p.name }) + "</optgroup>" : "") +
+          '<option value="keep"' + (c.kind === "keep" ? " selected" : "") + ">" + esc(t("arcx.pickKeep", { name: asWritten(p) })) + "</option>" +
+          '<option value="custom"' + (c.kind === "custom" ? " selected" : "") + ">" + esc(t("arcx.pickType")) + "</option>" +
+          (sug.length ? '<optgroup label="' + esc(t("arcx.pickSuggested")) + '">' + sug.map(opt).join("") + "</optgroup>" : "") +
+          '<optgroup label="' + esc(t("arcx.pickAccounts")) + '">' + accounts.filter(function (u) { return u.id !== p.id; }).map(opt).join("") + "</optgroup>" +
+          (others.length ? '<optgroup label="' + esc(t("arcx.pickOthers")) + '">' + others.filter(function (u) { return u.id !== p.id; }).map(opt).join("") + "</optgroup>" : "") +
+        "</select>" +
+        '<input class="input np-custom' + (c.kind === "custom" ? "" : " hidden") + '" data-pk="' + esc(p.pk) + '" maxlength="80" placeholder="' +
+          esc(t("arcx.typePh")) + '" value="' + esc(c.kind === "custom" ? c.name : "") + '">';
+    }
+    function paintNameRow(tr) {
+      var p = peopleByPk[tr.getAttribute("data-pk")], c = choices[p.pk];
+      var changed = c.kind !== (p.id ? "staff" : "keep") || (c.id || null) !== (p.id || null) || c.name !== p.name;
+      var u = c.kind === "staff" ? S.userById(c.id) : null;
+      var text = c.kind === "staff"
+        ? (changed ? t("arcx.chosenStaff", { role: t("role." + ((u && u.role) || "engineer")) }) : t("arcx.onStaff", { role: t("role." + (p.role || (u && u.role) || "engineer")) }))
+        : c.kind === "custom" ? (c.name ? t("arcx.typed") : t("arcx.typeMissing"))
+        : (p.id ? t("arcx.unlinked") : t("arcx.former"));
+      tr.querySelector(".np-status").textContent = text;
+      tr.className = (c.kind === "staff" ? "imp-ok" : (c.kind === "custom" && c.name ? "imp-ok" : "imp-warn")) + (changed ? " np-changed" : "");
+    }
+    function paintChangedCount() {
+      var n = $$(".names-table tr.np-changed").length;
+      var el = $("#np-changed");
+      if (el) { el.textContent = n ? t("arcx.changedN", { n: global.Fmt.num(n) }) : ""; }
+    }
+    function wireNamePickers() {
+      $$(".names-table tbody tr").forEach(paintNameRow);
+      paintChangedCount();
+      $$(".np-select").forEach(function (sel) {
+        sel.addEventListener("change", function () {
+          var pk = sel.getAttribute("data-pk"), p = peopleByPk[pk], v = sel.value;
+          var box = sel.parentNode.querySelector(".np-custom");
+          if (v === "custom") {
+            choices[pk] = { kind: "custom", id: null, name: box.value.trim() };
+            box.classList.remove("hidden");
+            box.focus();
+          } else {
+            box.classList.add("hidden");
+            if (v === "keep") { choices[pk] = { kind: "keep", id: null, name: asWritten(p) }; }
+            else { var u = S.userById(v.slice(6)); choices[pk] = { kind: "staff", id: u.id, name: u.name }; }
+          }
+          paintNameRow(sel.closest("tr"));
+          paintChangedCount();
+        });
+      });
+      $$(".np-custom").forEach(function (box) {
+        box.addEventListener("input", function () {
+          choices[box.getAttribute("data-pk")] = { kind: "custom", id: null, name: box.value.trim().replace(/\s+/g, " ") };
+          paintNameRow(box.closest("tr"));
+          paintChangedCount();
+        });
+      });
+      var only = $("#np-only");
+      if (only) {
+        only.addEventListener("change", function () {
+          $$(".names-table tbody tr").forEach(function (tr) {
+            tr.classList.toggle("hidden", only.checked && tr.getAttribute("data-unmatched") !== "1");
+          });
+        });
+      }
+    }
+    /* The records with every changed name replaced (author, worked with,
+       comment and action authors). The name as written is kept as "original". */
+    function applyNameChoices(bundle) {
+      var map = {}, any = false, keep = {};
+      Object.keys(choices).forEach(function (pk) {
+        var p = peopleByPk[pk], c = choices[pk];
+        if (!p || (c.kind === "custom" && !c.name)) { return; }
+        var same = (c.id || null) === (p.id || null) && c.name === p.name;
+        var mk = memKey(p);
+        if (same) { delete remembered[mk]; return; }
+        remembered[mk] = { kind: c.kind, id: c.id || null, name: c.name };
+        var u = c.kind === "staff" ? S.userById(c.id) : null;
+        map[pk] = { id: c.id || null, name: c.name, role: u ? u.role || "" : "", jobTitle: u ? u.jobTitle || "" : "" };
+        any = true;
+      });
+      try { global.Prefs.set("arcNameChoices", remembered); } catch (e) { /* only a convenience */ }
+      if (!any) { return bundle; }
+      var out = JSON.parse(JSON.stringify(bundle));
+      function fix(ref) {
+        if (!ref) { return ref; }
+        var c = map[(ref.id || "") + "|" + ref.name];
+        if (!c) { return ref; }
+        var r = { id: c.id, name: c.name };
+        var orig = ref.original || (ref.name !== c.name ? ref.name : "");
+        if (orig && orig !== c.name) { r.original = orig; }
+        return r;
+      }
+      out.records.forEach(function (r) {
+        r.createdBy = fix(r.createdBy) || r.createdBy;
+        var seenTeam = {};
+        var authorKey = (r.createdBy.id || "") + "|" + r.createdBy.name;
+        r.team = (r.team || []).map(function (m) {
+          var c = map[(m.id || "") + "|" + m.name];
+          if (!c) { return m; }
+          return c.id ? { id: c.id, name: c.name, role: c.role || "engineer", jobTitle: c.jobTitle || "" } : { id: null, name: c.name };
+        }).filter(function (m) {
+          var k = (m.id || "") + "|" + m.name;
+          if (k === authorKey || seenTeam[k]) { return false; }
+          seenTeam[k] = true;
+          return true;
+        });
+        (r.comments || []).forEach(function (cm) { cm.by = fix(cm.by); });
+        (r.actions || []).forEach(function (a) { a.by = fix(a.by); if (a.doneBy) { a.doneBy = fix(a.doneBy); } });
+      });
+      return out;
     }
 
     async function runArchiveImport(res) {
       var n = res.bundle.records.length;
+      var missing = Object.keys(choices).filter(function (pk) { return choices[pk].kind === "custom" && !choices[pk].name; });
+      if (missing.length) {
+        global.UI.toast(t("arcx.typeMissingN", { n: missing.length }), "err");
+        var first = document.querySelector('.np-custom[data-pk="' + missing[0].replace(/"/g, '\\"') + '"]');
+        if (first) { first.focus(); }
+        return;
+      }
       var ok = await global.UI.confirm(
         t(info ? "arcx.confirmReplace" : "arcx.confirm", { n: global.Fmt.num(n), db: t("view.pill." + db), old: info ? global.Fmt.num(info.count) : "0" }),
         { okLabel: t("arcx.go", { n: global.Fmt.num(n), db: t("view.pill." + db) }) });
@@ -3361,7 +3538,7 @@
       global.UI.busy(true, t("common.saving"));
       try {
         var me = global.App.user();
-        var done = await S.importArchive(res.bundle, me ? me.name : "", function (i, total, name) {
+        var done = await S.importArchive(res.stats ? applyNameChoices(res.bundle) : res.bundle, me ? me.name : "", function (i, total, name) {
           var lab = document.getElementById("busy-label");
           if (lab) { lab.textContent = t("arc.progress", { i: global.Fmt.num(i), n: global.Fmt.num(total), name: name }); }
         }, db);

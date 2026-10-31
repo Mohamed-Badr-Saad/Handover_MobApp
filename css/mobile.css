@@ -159,3 +159,9 @@ body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
 .install-hero img { border-radius: 14px; flex: none; box-shadow: var(--shadow); }
 .install-big { width: 100%; min-height: 48px; font-size: 1.02rem; }
 .install-sheet .install-steps { margin-top: 10px; }
+
+/* old-sheet import: choose who a name is */
+.names-table .np-cell { min-width: 230px; }
+.names-table .np-select { width: 100%; min-width: 210px; }
+.names-table .np-custom { width: 100%; margin-top: 6px; }
+.names-table tr.np-changed td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
