@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plant Handover – Rashpetco Instruments</title>
+<meta name="description" content="Shift handovers linked to plant equipment - Rashpetco Instruments Department.">
+<meta name="theme-color" content="#1c3f9e">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="img/icon-favicon.png">
+<!-- iPhone / iPad: home-screen app -->
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Handover">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+<!-- ======================= SIGN-IN ======================= -->
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <div class="gate-org">
+      <div class="org-logos">
+        <img src="img/rashpetco.png" alt="Rashpetco" class="logo-rashpetco">
+        <img src="img/shell.png" alt="Shell" class="logo-shell">
+      </div>
+      <div class="org-name" data-i18n="org.company">Rashid Petroleum Company (Rashpetco)</div>
+      <div class="org-dept" data-i18n="org.dept">Instruments Department</div>
+    </div>
+    <div class="gate-brand">
+      <div>
+        <h1 id="gate-title">Plant Handover</h1>
+        <p id="gate-sub">Shift handovers linked to plant equipment</p>
+      </div>
+    </div>
+    <div id="gate-body"><div class="gate-step"><p>Loading…</p></div></div>
+    <div class="gate-foot" id="gate-foot"></div>
+  </div>
+</div>
+
+<!-- ======================= MAIN APP ======================= -->
+<div id="app" class="app hidden">
+
+  <div class="net-banner hidden" id="offline-banner" data-i18n="pwa.offline">No connection</div>
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="img/rashpetco.png" alt="Rashpetco" class="logo-rashpetco">
+      <img src="img/shell.png" alt="Shell" class="logo-shell">
+      <div class="brand-text">
+        <span class="brand-app" data-i18n="app.name">Plant Handover</span>
+        <span class="brand-org"><span data-i18n="org.short">Rashpetco</span> · <span data-i18n="org.dept">Instruments Department</span></span>
+      </div>
+    </div>
+
+    <div class="topbar-search" id="topbar-search">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>
+      <input type="search" id="global-search" autocomplete="off" enterkeyhint="search" data-i18n-ph="search.placeholder" placeholder="Search handovers, tags, comments...">
+    </div>
+
+    <div class="topbar-right">
+      <div class="view-switch hidden" id="view-switch" role="group" aria-label="Database">
+        <button type="button" data-view="managers"><span data-i18n="view.switchMgr">Managers</span></button>
+        <button type="button" data-view="engineers"><span data-i18n="view.switchEng">Engineers</span></button>
+      </div>
+      <button class="icon-btn search-toggle" id="search-toggle" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>
+      </button>
+      <button class="icon-btn bell" id="bell-btn" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.9V4a1 1 0 1 0-2 0v1.1A6 6 0 0 0 6 11v5l-1.7 1.7V19h15.4v-1.3L18 16z"/></svg>
+        <span class="bell-dot hidden" id="bell-dot"></span>
+      </button>
+      <button class="user-chip" id="user-chip">
+        <span class="avatar" id="user-avatar">?</span>
+        <span class="user-chip-name" id="user-name-label"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="sidenav" id="sidenav">
+      <a class="nav-item" data-route="dashboard">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        <span data-i18n="nav.dashboard">Dashboard</span>
+      </a>
+      <a class="nav-item" data-route="handovers">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span data-i18n="nav.handovers">Handovers</span>
+      </a>
+      <a class="nav-item" data-route="equipment">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="m19.4 13-.9-.5a6.6 6.6 0 0 0 0-2l.9-.5a1 1 0 0 0 .4-1.4l-1-1.7a1 1 0 0 0-1.3-.4l-.9.5a6.9 6.9 0 0 0-1.7-1V5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v1a6.9 6.9 0 0 0-1.7 1l-.9-.5a1 1 0 0 0-1.3.4l-1 1.7A1 1 0 0 0 4.4 10l.9.5a6.6 6.6 0 0 0 0 2l-.9.5a1 1 0 0 0-.4 1.4l1 1.7a1 1 0 0 0 1.3.4l.9-.5a6.9 6.9 0 0 0 1.7 1v1a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-1a6.9 6.9 0 0 0 1.7-1l.9.5a1 1 0 0 0 1.3-.4l1-1.7a1 1 0 0 0-.4-1.4zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+        <span data-i18n="nav.equipment">Equipment</span>
+      </a>
+      <a class="nav-item" data-route="notifications">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.9V4a1 1 0 1 0-2 0v1.1A6 6 0 0 0 6 11v5l-1.7 1.7V19h15.4v-1.3L18 16z"/></svg>
+        <span data-i18n="nav.notifications">Notifications</span>
+        <span class="nav-count hidden" id="nav-unread"></span>
+      </a>
+      <div class="nav-sep"></div>
+      <a class="nav-item" data-route="profile">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4 0-9 2-9 5v3h18v-3c0-3-5-5-9-5z"/></svg>
+        <span data-i18n="nav.profile">Profile</span>
+      </a>
+      <a class="nav-item admin-only hidden" data-route="admin">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5l-9-4zm0 6a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm0 11c-1.7 0-3.9-.9-5-2.7.1-1.6 3.3-2.5 5-2.5s4.9.9 5 2.5c-1.1 1.8-3.3 2.7-5 2.7z"/></svg>
+        <span data-i18n="nav.admin">Administration</span>
+      </a>
+    </nav>
+
+    <main class="main" id="view"></main>
+  </div>
+
+  <button class="fab" id="fab-new" title="" data-i18n-title="handover.new">
+    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+  </button>
+
+  <!-- Phones: bottom tab bar -->
+  <nav class="tabbar" id="tabbar" aria-label="Main">
+    <button class="tab" data-tab="dashboard">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span data-i18n="nav.dashboard">Dashboard</span>
+    </button>
+    <button class="tab" data-tab="handovers">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      <span data-i18n="nav.handovers">Handovers</span>
+    </button>
+    <button class="tab tab-new" data-tab="handover/new" aria-label="New handover">
+      <span class="tab-new-circle"><svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></span>
+      <span data-i18n="nav.new">New</span>
+    </button>
+    <button class="tab" data-tab="notifications">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.9V4a1 1 0 1 0-2 0v1.1A6 6 0 0 0 6 11v5l-1.7 1.7V19h15.4v-1.3L18 16z"/></svg>
+      <span class="tab-badge hidden" id="tab-unread"></span></span>
+      <span data-i18n="nav.notifications">Notifications</span>
+    </button>
+    <button class="tab" data-tab="more">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+      <span data-i18n="nav.more">More</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Install hint (Android: real install button; iPhone: how to add to Home Screen) -->
+<div class="install-banner hidden" id="install-banner">
+  <img src="img/icon-96.png" alt="" width="40" height="40">
+  <div class="ib-text" id="install-text"></div>
+  <button class="btn primary sm" id="install-go" data-i18n="pwa.installNow">Install app</button>
+  <button class="btn ghost sm" id="install-later" data-i18n="pwa.later">Later</button>
+</div>
+
+<!-- New version ready -->
+<div class="update-banner hidden" id="update-banner">
+  <span data-i18n="pwa.updateReady">A new version is ready.</span>
+  <button class="btn primary sm" id="update-go" data-i18n="pwa.reload">Reload</button>
+</div>
+
+<!-- ======================= OVERLAYS ======================= -->
+<div class="modal-host hidden" id="modal-host">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="modal-title"></h2>
+      <button class="icon-btn" id="modal-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div class="toast-host" id="toast-host"></div>
+
+<div class="busy hidden" id="busy"><div class="spinner"></div><span id="busy-label"></span></div>
+
+<script src="js/config.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/core.js"></script>
+<script src="js/seed-staff.js"></script>
+<script src="js/vendor/supabase.js"></script>
+<script src="js/store.js"></script>
+<script src="js/views.js"></script>
+<script src="js/move.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

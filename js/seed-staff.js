@@ -1,0 +1,35 @@
+/* Instrument department roster - the standard staff list.
+   Loaded as a classic script because a file:// page cannot fetch() a JSON file.
+   Seeded on first run; Administration can reload it later without losing edits. */
+window.SEED_STAFF = [
+  {"employeeId": "OPR952", "name": "Mohamed Reda Hassan", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR969", "name": "Haytham Fouad Fawaz", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR997", "name": "Ayman Mohamed Saleh", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR1108", "name": "Mahmoud Moh. Ghoneim", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR1109", "name": "Mohamed Abdel Razek", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR1201", "name": "Ahmed Saleh Gaber", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR1211", "name": "Mohamed Badr Saad", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "OPR496", "name": "Ahmed Yousef", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "OPR743", "name": "Momtaz Ahmed Razk", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "EMC-021", "name": "Waleed Abd El Monem", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-184", "name": "Mohamed Talaat", "jobTitle": "First Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-430", "name": "Ali Abdelrahman Abo Elhamd", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-458", "name": "Ahmed Saeed Sayed", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-463", "name": "Ahmed Salah Abbas", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-484", "name": "Mostafa Khaled Mohamed Nabawy", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-502", "name": "Anas Mohamed", "jobTitle": "Inst. Eng.", "department": "Instrument", "role": "engineer", "active": true},
+  {"employeeId": "EMC-011", "name": "Khaled Radwan", "jobTitle": "Inst. Sup.", "department": "Instrument", "role": "supervisor", "active": true},
+  {"employeeId": "EMC-179", "name": "Walid Nazim", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "EMC-180", "name": "Sayed Hamed", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "EMC-490", "name": "Mohamed Abdelmohsen Abozeid", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E797)", "name": "Mohamed Mahmoud", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E1019)", "name": "Abd El Fatah Zakaraya", "jobTitle": "Inst. Helper", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E66)", "name": "Ahmed Shehata Abdo", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E849)", "name": "Mohamed Awad", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E928)", "name": "Mahmoud Eid", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E1011)", "name": "Ayman Kamal", "jobTitle": "Inst. Helper", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E980)", "name": "Mohamed EL Sayed Toto", "jobTitle": "Inst. Helper", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E1053)", "name": "Hany Mosad Saad", "jobTitle": "Inst. Tech.", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E992)", "name": "Mohamed Farouk", "jobTitle": "Inst. Helper", "department": "Instrument", "role": "technician", "active": true},
+  {"employeeId": "Epesco (E205)", "name": "Khamis Ibrahim", "jobTitle": "Inst. Helper", "department": "Instrument", "role": "technician", "active": true}
+];

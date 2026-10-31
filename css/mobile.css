@@ -1,0 +1,155 @@
+/* ==========================================================================
+   Plant Handover - phone & tablet layer (PWA).
+   Loaded after app.css. Phones get a bottom tab bar, bigger touch targets,
+   16px inputs (no iOS zoom) and room for the notch / home indicator.
+   ========================================================================== */
+
+:root {
+  --tabbar-h: 60px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+
+.gate { padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(16px + var(--safe-left)); overflow-y: auto; align-items: flex-start; }
+@media (min-height: 760px) { .gate { align-items: center; } }
+
+.topbar { padding-top: var(--safe-top); height: calc(var(--topbar-h) + var(--safe-top)); padding-inline: calc(14px + var(--safe-left)) calc(14px + var(--safe-right)); }
+
+/* tab bar (hidden on wide screens) */
+.tabbar { display: none; }
+.search-toggle { display: none; }
+
+.net-banner {
+  position: sticky; top: 0; z-index: 35;
+  padding: calc(6px + var(--safe-top)) 14px 6px; text-align: center; font-size: .82rem; font-weight: 600;
+  background: var(--warn-soft); color: var(--warn); border-bottom: 1px solid var(--border);
+}
+.net-banner:not(.hidden) + .topbar { padding-top: 0; height: var(--topbar-h); }
+
+.check-line { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-weight: 600; cursor: pointer; }
+.check-line input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+/* install & update banners */
+.install-banner, .update-banner {
+  position: fixed; z-index: 70;
+  inset-inline: calc(12px + var(--safe-left)) calc(12px + var(--safe-right));
+  bottom: calc(12px + var(--safe-bottom));
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 14px;
+  background: var(--bg-raised); border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  max-width: 560px; margin-inline: auto;
+}
+.install-banner img { border-radius: 10px; flex: none; }
+.install-banner .ib-text { flex: 1 1 200px; font-size: .88rem; }
+.update-banner span { flex: 1 1 auto; font-weight: 600; font-size: .9rem; }
+
+/* "More" page (phones) */
+.more-list { display: flex; flex-direction: column; gap: 2px; padding: 4px; }
+.more-item {
+  display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 10px 12px;
+  border: 0; border-radius: var(--radius-s); background: transparent; text-align: start; cursor: pointer;
+  font-size: 1rem; color: var(--text);
+}
+.more-item:hover, .more-item:active { background: var(--bg-hover); }
+.more-item svg { color: var(--text-soft); flex: none; }
+.more-item .sub { display: block; font-size: .8rem; color: var(--text-faint); }
+.more-item.danger { color: var(--danger); }
+.more-item.danger svg { color: var(--danger); }
+.more-user { display: flex; gap: 12px; align-items: center; padding: 6px 4px 14px; }
+
+.install-steps { display: flex; flex-direction: column; gap: 8px; margin: 0; padding-inline-start: 18px; }
+
+/* ----------------------------------------------------------------- phones & small tablets */
+@media (max-width: 860px) {
+  html { scroll-padding-top: calc(var(--topbar-h) + var(--safe-top) + 8px); scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px); }
+  .sidenav, .menu-toggle, .fab { display: none !important; }
+  .user-chip { display: none; }
+  .search-toggle { display: inline-flex; }
+  .topbar { overflow: hidden; }
+  .topbar-brand { min-width: 0; flex: 0 1 auto; }
+  .topbar-brand .brand-text { display: flex !important; border: 0; padding-inline-start: 2px; min-width: 0; }
+  .topbar-brand .brand-app { overflow: hidden; text-overflow: ellipsis; }
+  .topbar-brand .brand-org { display: none; }
+  body.is-manager .topbar-brand .brand-text { display: none !important; }
+  .topbar-right { flex: none; gap: 2px; }
+  .topbar { gap: 8px; }
+  .topbar-search { display: none; }
+  body.search-open .topbar-search {
+    display: flex; position: absolute; z-index: 2;
+    inset-inline: calc(10px + var(--safe-left)) calc(10px + var(--safe-right));
+    top: calc(var(--safe-top) + 8px); max-width: none; margin: 0;
+  }
+  body.search-open .topbar-search input { height: 40px; }
+
+  .main {
+    padding: 14px calc(12px + var(--safe-right)) calc(var(--tabbar-h) + var(--safe-bottom) + 24px) calc(12px + var(--safe-left)) !important;
+    min-width: 0;
+  }
+
+  .tabbar {
+    display: flex; position: fixed; z-index: 45; inset-inline: 0; bottom: 0;
+    height: calc(var(--tabbar-h) + var(--safe-bottom));
+    padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+    background: var(--bg-raised); border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px rgba(16,20,28,.06);
+  }
+  .tab {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border: 0; background: transparent; color: var(--text-faint); cursor: pointer; padding: 6px 2px 4px;
+    font: inherit; font-size: .68rem; font-weight: 600;
+  }
+  .tab span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tab.active { color: var(--accent); }
+  .tab-icon { position: relative; display: inline-flex; }
+  .tab-badge {
+    position: absolute; top: -5px; inset-inline-end: -9px; min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: 9px; background: var(--danger); color: #fff; font-size: .66rem; line-height: 17px; text-align: center;
+  }
+  .tab-new { color: var(--accent); }
+  .tab-new-circle {
+    display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 32px; border-radius: 12px;
+    background: var(--accent); color: var(--accent-text);
+  }
+  body.in-managers-view .tab-new-circle { background: var(--mgr); color: #fff; }
+
+  /* touch-friendly controls; 16px text stops iOS zooming into fields */
+  .btn { min-height: 42px; }
+  .btn.sm { min-height: 36px; }
+  .icon-btn { width: 42px; height: 42px; }
+  input, select, textarea, .input { font-size: 16px !important; }
+  .input, .filters input, .filters select { min-height: 44px; }
+
+  .page-head { flex-wrap: wrap; gap: 10px; }
+  .page-head h1 { font-size: 1.2rem; }
+  .card { padding: 14px; border-radius: 12px; }
+  .table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .filters > * { flex: 1 1 140px; min-width: 0; }
+
+  .modal-host { padding: 0; align-items: flex-end; }
+  .modal, .modal.wide {
+    width: 100%; max-width: none; max-height: calc(100% - var(--safe-top) - 24px);
+    border-radius: 16px 16px 0 0; padding-bottom: var(--safe-bottom);
+  }
+  .toast-host { bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px) !important; }
+  .install-banner, .update-banner { bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 10px); }
+
+  .attach-btns .btn { flex: 1 1 140px; }
+  .dropzone { display: none; }
+  .view-switch { margin-inline-end: 0; }
+}
+
+@media (max-width: 380px) {
+  .view-switch button { padding: 5px 7px; font-size: .72rem; }
+  .topbar-brand .logo-rashpetco { width: 26px; height: 26px; }
+}
+
+/* installed app: no browser bar, so leave a little more room at the top */
+@media (display-mode: standalone) {
+  .gate-foot { padding-bottom: 4px; }
+}
